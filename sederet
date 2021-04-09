@@ -1,0 +1,39 @@
+#!/usr/bin/php
+<?php
+echo 'Query: ';
+$query = readline();
+$html = file_get_contents('https://sederet.com');
+if (!preg_match('@<form method="post" action="([^"]+)"@', $html, $match)) {
+  die('Unable to parse home page.');
+}
+$action = $match[1];
+if (!preg_match('@<input type="hidden" name="var" value="([^"]+)"@', $html, $match)) {
+  die('Unable to parse home page.');
+}
+$var = $match[1];
+$context = stream_context_create([
+  'http' => [
+    'method' => 'POST',
+    'header' => 'Content-Type: application/x-www-form-urlencoded',
+    'content' => http_build_query([
+      'q' => $query,
+      'lang' => 'en_id',
+      'var' => $var
+    ])
+  ]
+]);
+$html = file_get_contents($action, false, $context);
+if (!preg_match_all('@<tr class="result_tr">([\s\S]+?)</tr>@', $html, $matches)) {
+  die('Unable to parse search result.');
+}
+foreach ($matches[1] as $row) {
+  if (!preg_match('@<td class="left_td">([\s\S]+?)</td>@', $row, $match)) {
+    die('Unable to parse search result.');
+  }
+  $left = trim(strip_tags($match[1]));
+  if (!preg_match('@<td class="right_td">([\s\S]+?)</td>@', $row, $match)) {
+    die('Unable to parse search result.');
+  }
+  $right = trim(strip_tags($match[1]));
+  echo "$left:\n  $right\n";
+}
